@@ -11,4 +11,7 @@ export class CreateNoteDto {
 
   @IsString()
   color: string;
+
+  // @IsString()
+  // _id: string;
 }

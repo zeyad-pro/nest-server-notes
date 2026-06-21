@@ -20,31 +20,38 @@ import { CreateNoteDto } from './dto/create-note.dto';
 import { UpdateNoteDto } from './dto/update-note.dto';
 import { Types } from 'mongoose';
 import { NotesGuard } from './guard/notes.guard';
+import { create } from 'domain';
 
 @Controller('notes')
 @UseGuards(NotesGuard)
 export class NotesController {
   constructor(private readonly notesService: NotesService) {}
 
-  @Post()
-  @UsePipes(new ValidationPipe({ transform: true }))
-  @UseGuards(NotesGuard)
 
-
-  createNote(@Req() request: any, @Body() createNoteDto: any) {
-   const bodyUserId = request.body.userid;
+@Post()
+@UsePipes(new ValidationPipe({ transform: true }))
+@UseGuards(NotesGuard)
+async createNote(@Req() request: any, @Body() createNoteDto: any) {
+  // Extract the authenticated user ID from the guard payload
   const tokenUserId = request.user.userid;
-    if (bodyUserId && bodyUserId !== tokenUserId) {
-      return {
-        message: 'false!',
-        userIdFromToken:bodyUserId,
-      };
-    }
-    return this.notesService.create(createNoteDto, request.user);
+  console.log("anything", tokenUserId)
+  if (!tokenUserId) {
+    return {
+      success: false,
+      message: "Unauthorized: User ID not found in token",
+    };
   }
+  console.log("anything")
+  
+  // Pass both the form body and the secure user ID to the service
+  return this.notesService.create(createNoteDto, tokenUserId);
+}
+
+
 
   @Get()
   findAll(@Req() req: any) {
+    
     return this.notesService.findAll(req.user);
   }
 

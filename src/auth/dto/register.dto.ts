@@ -16,7 +16,7 @@ export class registerDto{
   @ApiProperty()
   @MinLength(3)
   @IsString()
-  @MaxLength(20)
+  @MaxLength(100)
   name: string;
 
   @ApiProperty()
@@ -32,8 +32,8 @@ export class registerDto{
   email: string;
 
   @ApiProperty()
-  @Min(8)
-  @IsNumber()
+  @Min(10)
+  // @IsNumber()
   number: number;
 
   @ApiProperty()
@@ -41,5 +41,6 @@ export class registerDto{
   @IsString()
   password: string;
 
+  
 
 }

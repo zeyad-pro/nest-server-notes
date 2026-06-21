@@ -16,7 +16,7 @@ export class CreateUserDto {
   @ApiProperty()
   @MinLength(3)
   @IsString()
-  @MaxLength(20)
+  @MaxLength(100)
   name: string;
 
   @ApiProperty()
@@ -28,12 +28,12 @@ export class CreateUserDto {
   @MinLength(1)
   @IsString()
   @IsEmail()
-  @MaxLength(20)
+  @MaxLength(100)
   email: string;
 
   @ApiProperty()
-  @Min(8)
-  @IsNumber()
+  @Min(10)
+  // @IsNumber()
   number: number;
 
   @ApiProperty()

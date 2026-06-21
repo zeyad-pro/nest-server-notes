@@ -1,30 +1,34 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt'; 
+import { UsersService } from 'src/users/users.service';
 
 @Injectable()
 export class NotesGuard implements CanActivate {
-  constructor(private jwtService: JwtService) {}
+  constructor(private jwtService: JwtService, private readonly usersService: UsersService,) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const authHeader = request.headers.authorization;
 
-    // 1. تشيك وجود التوكن في الهيدرز
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new UnauthorizedException('أنت مش باعت توكن يا فنان!');
+      throw new UnauthorizedException('no token');
     }
 
     const token = authHeader.split(' ')[1];
 
     try {
-      // 2. فك التوكن (تأكد إن الاسبلنج بتاع الـ secret نفس اللي في الـ .env بالظبط)
       const payload = await this.jwtService.verifyAsync(token, { secret: process.env.JWT_SECRET_KEY });
-      
-      // 3. بنرمي بيانات اليوزر جوه الـ request عشان الـ Controller والـ Service يشوفوها
+      const userExists = await this.usersService.findByEmail(payload.email);
+      if (!userExists) {
+        throw new UnauthorizedException('User no longer exists in database');
+      }
       request.user = payload; 
       return true;
     } catch {
-      throw new UnauthorizedException('التوكن ده مزور أو منتهي الصلاحية!');
+      throw new UnauthorizedException('token is not apply');
     }
   }
+
+
+
 }

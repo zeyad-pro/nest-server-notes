@@ -17,8 +17,7 @@ export class Note {
   
  
 @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
-user: MongooseSchema.Types.ObjectId; // ربط النوتة بصاحبها
-  
+user: MongooseSchema.Types.ObjectId; 
  
 }
 

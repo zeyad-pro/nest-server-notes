@@ -14,6 +14,7 @@ export class EmailService {
     private readonly mailerService: MailerService,
     private readonly configService: ConfigService,
     private readonly jwtService: JwtService,
+    // private readonly emailService: EmailService,
     @InjectModel(Users.name) private userModel: Model<UsersDocument>,
   ) {}
 
@@ -46,9 +47,9 @@ export class EmailService {
       throw new BadRequestException('User not found');
     }
 
-   const url = `${this.configService.get('EMAIL_RESET_PASSWORD_URL')}?token=${token}`;
+    const url = `${this.configService.get('EMAIL_RESET_PASSWORD_URL')}?token=${token}`;
     // console.log("url" , url)
-  const htmlTemplate = `
+    const htmlTemplate = `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #ffffff; color: #333333;">
       <div style="text-align: center; margin-bottom: 25px;">
         <h2 style="color: #4f46e5; margin: 0; font-size: 26px; font-weight: 700;">Zeyad Maher</h2>
@@ -76,11 +77,10 @@ export class EmailService {
     </div>
   `;
 
-
     return this.sendMail({
       to: email,
       subject: 'Reset password',
-      html : htmlTemplate,
+      html: htmlTemplate,
     });
   }
   public async SendDeleteaccount(email: string): Promise<void> {
@@ -91,10 +91,9 @@ export class EmailService {
       expiresIn: `${this.configService.get('JWT_VERIFICATION_TOKEN_EXPIRATION_TIME')}s`,
     });
 
-
-   const url = `${this.configService.get('EMAIL_DELETE_URL')}?token=${token}`;
+    const url = `${this.configService.get('EMAIL_DELETE_URL')}?token=${token}`;
     // console.log("url" , url)
-  const htmlTemplate = `
+    const htmlTemplate = `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #ffffff; color: #333333;">
       <div style="text-align: center; margin-bottom: 25px;">
         <h2 style="color: #4f46e5; margin: 0; font-size: 26px; font-weight: 700;">Zeyad Maher</h2>
@@ -122,11 +121,10 @@ export class EmailService {
     </div>
   `;
 
-
     return this.sendMail({
       to: email,
       subject: 'Delete account',
-      html : htmlTemplate,
+      html: htmlTemplate,
     });
   }
 
@@ -148,9 +146,8 @@ export class EmailService {
     }
   }
 
-
   public async sendVerificationLink(email: string, url: string): Promise<void> {
-  const htmlTemplate = `
+    const htmlTemplate = `
     <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #ffffff;">
       <h2 style="color: #4f46e5; text-align: center;">Welcome! Verify Your Email</h2>
       <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Thank you for registering. Please confirm your email address by clicking the button below:</p>
@@ -163,10 +160,61 @@ export class EmailService {
     </div>
   `;
 
-  return this.sendMail({
-    to: email,
-    subject: 'Verify Your Email Address',
-    html: htmlTemplate,
-  });
-}
+    return this.sendMail({
+      to: email,
+      subject: 'Verify Your Email Address',
+      html: htmlTemplate,
+    });
+  }
+
+  public async resendVerification(token: string) {
+  
+      const payload = await this.jwtService.verify(token, {
+        secret: this.configService.get<string>('JWT_SECRET_KEY'),
+      });
+
+      const user = await this.userModel.findOne({
+        email: payload.email.toLowerCase().trim(),
+      });
+
+      if (!user) {
+        throw new BadRequestException('User with this email does not exist.');
+      }
+
+      if (user.isVerified) {
+        console.log( 'This account is already verified. Please log in.')
+        throw new BadRequestException(
+          'This account is already verified. Please log in.',
+        );
+      }
+try {
+      // 3. Generate a brand new Verification Token
+      const newVerificationToken = this.jwtService.sign(
+        { email: user.email },
+        {
+          secret: this.configService.get<string>('JWT_SECRET_KEY'),
+          expiresIn: '24h', // Grants them another 24 hours to verify
+        },
+      );
+  
+      // 4. Update the verificationToken field in the database with the new one
+      user.verificationToken = newVerificationToken;
+      await user.save();
+      const url = `http://localhost:3000/auth/verify-email?token=${newVerificationToken}`
+      // 5. Send the new link to the user's email via your EmailService
+      await this.sendVerificationLink(
+        user.email,
+        url,
+      );
+    } catch (error){
+    console.error('Database save error during verification:', error);
+  throw new BadRequestException('Failed to finalize user verification.');
+    }
+
+    return {
+      success: true,
+      message:
+        'A new verification link has been sent to your email. It is valid for 24 hours.',
+    };
+  }
 }

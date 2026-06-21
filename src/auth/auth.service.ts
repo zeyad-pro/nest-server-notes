@@ -30,7 +30,7 @@ export class AuthService {
   ) {}
   private generateToken(user: any) {
     const payload = {
-      userid: user._id, // 👈 غيرناها لـ userid عشان تطابق السيرفيس
+      userid: user._id.toString(),
       email: user.email,
       role: user.role,
     };
@@ -50,17 +50,15 @@ export class AuthService {
       throw new BadRequestException('User already exists');
     }
 
-    
-  const passwordHash = await bcrypt.hash(registerDto.password, 10);
-     
-  const verificationToken = this.jwtService.sign(
-        { email: registerDto.email },
-        {
-          secret: this.configService.get<string>('JWT_SECRET_KEY'),
-          expiresIn: '24h', // صلاحية الرابط يوم كامل
-        },
-      );
+    const passwordHash = await bcrypt.hash(registerDto.password, 10);
 
+    const verificationToken = this.jwtService.sign(
+      { email: registerDto.email },
+      {
+        secret: this.configService.get<string>('JWT_SECRET_KEY'),
+        expiresIn: '24h', // صلاحية الرابط يوم كامل
+      },
+    );
     const user = await this.userModel.create({
       ...registerDto,
       verificationToken,
@@ -150,13 +148,12 @@ export class AuthService {
 
   //////////
   public async verifyEmail(token: string) {
+    console.log('token', token);
     try {
-      // 1. فك التوكن والتأكد من صلاحيته
       const payload = await this.jwtService.verify(token, {
         secret: this.configService.get<string>('JWT_SECRET_KEY'),
       });
 
-      // 2. البحث عن المستخدم الذي يملك هذا التوكن والإيميل
       const user = await this.userModel.findOne({
         email: payload.email,
         verificationToken: token,
@@ -165,15 +162,35 @@ export class AuthService {
         throw new BadRequestException('Invalid or expired verification token');
       }
 
-      // 3. تحديث حالة الحساب ومسح التوكن المؤقت
       user.isVerified = true;
       user.verificationToken = '';
       await user.save();
+      const sessionPayload = {
+        userid: user._id.toString(), // Safely passes the real Mongoose ObjectId as a string
+        email: user.email,
+        role: user.role,
+      };
 
-      return { message: 'Email verified successfully! You can now log in.' };
+      const accessToken = this.jwtService.sign(sessionPayload, {
+        secret: this.configService.get<string>('JWT_SECRET_KEY'),
+        expiresIn: '1d', // Standard session duration
+      });
+
+      const data = {
+        success: true,
+        message: 'Email verified successfully! You are now logged in.',
+        token: accessToken,
+        user: {
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        },
+      };
+      console.log("data",data)
+      return data;
     } catch (error) {
       // console.log(error);
-
+      console.log('Validation failed errors:', JSON.stringify(error, null, 2));
       throw new BadRequestException(
         'Email verification failed or token expired.',
       );

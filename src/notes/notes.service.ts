@@ -13,17 +13,22 @@ import { Model } from 'mongoose';
 @Injectable()
 export class NotesService {
   constructor(@InjectModel(Note.name) private NoteModel: Model<Note>) {}
+  
+// Add userId as a second parameter to the function
+async create(createNoteDto: CreateNoteDto, userId: string) {
+  console.log("------ test start ---------");
+  
+  // Combine DTO data with the validated user ID
+  const creatednote = new this.NoteModel({
+    ...createNoteDto,
+    user: userId, 
+  });
 
-  create(createNoteDto: CreateNoteDto, currentUser: any) {
-    // console.log('--- TEST CURRENT USER ---');
-  // console.log(currentUser);
-    const creatednote = new this.NoteModel({
-      ...createNoteDto,
-      user: currentUser?.userid || currentUser?.id,
-    });
-    return creatednote.save();
-  }
-
+  console.log("Created Note Object:", creatednote);
+  console.log("------ test end ---------");
+  
+  return await  creatednote.save();
+}
   async findAll(currentUser: any) {
     if (currentUser.role === 'admin' || currentUser.role === 'manager') {
       return this.NoteModel.find();
@@ -48,8 +53,8 @@ export class NotesService {
     if (!note) throw new NotFoundException('النوتة دي مش موجودة أصلاً');
     if (
       currentUser.role !== 'admin' &&
-      currentUser.role !== 'manager' &&
-      note.user.toString() !== currentUser.userid
+      currentUser.role !== 'manager'
+      // note.user.toString() !== currentUser.userid
     ) {
       throw new ForbiddenException('أنت بتحاول تمسح نوتة مش بتاعتك! ⛔');
     }

@@ -7,7 +7,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableCors({
-   origin: ['http://localhost:3000', 'http://localhost:3001'],
+   origin: ['http://localhost:3000', 'http://localhost:3001', 'https://client-notes-one.vercel.app/'],
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
   });
@@ -19,7 +19,6 @@ async function bootstrap() {
       transform: true,
       forbidUnknownValues: true,
       exceptionFactory: (errors) => {
-        // This will log the EXACT validation error message in your NestJS terminal window
         console.log(
           'Validation failed errors:',
           JSON.stringify(errors, null, 2),
